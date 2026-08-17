@@ -168,7 +168,7 @@
             <div id="play-content">
                 <div class="overlay-title">BLOOM</div>
                 <div class="overlay-desc" style="font-weight: bold; color: #fff; font-size: 16px;">by SRG774</div>
-                <div class="overlay-desc">Tap to plant. Find the hidden seeds to unlock screen-filling dimensional shifts. All UI is hidden for immersion.</div>
+                <div class="overlay-desc">Tap to plant. Hold anywhere for 5 seconds to evolve to the next fractal type. All UI is hidden for immersion.</div>
                 <button id="start-btn">Enter & Play</button>
             </div>
         </div>
@@ -199,9 +199,10 @@
         resizeCanvas();
 
         let activeBlooms = [];
-        let seedsFound = 0;
-        let currentFractalType = -1;
-        let isAnimatingWin = false;
+        const fractalTypes = [-1, 0, 1, 2, 3];
+        let currentTypeIndex = 0;
+        let currentFractalType = fractalTypes[currentTypeIndex];
+        let holdTimer = null;
 
         const ambientScale = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63];
         let audioCtx = null;
@@ -243,54 +244,6 @@
             } catch(e) {}
         }
 
-        function playMegaDrone() {
-            if (!audioCtx) return;
-            try {
-                const osc1 = audioCtx.createOscillator();
-                const osc2 = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                const filter = audioCtx.createBiquadFilter();
-
-                osc1.type = 'sine';
-                osc2.type = 'triangle';
-                osc1.frequency.setValueAtTime(130.81, audioCtx.currentTime);
-                osc2.frequency.setValueAtTime(132.00, audioCtx.currentTime);
-
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(100, audioCtx.currentTime);
-                filter.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 3.5);
-                filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 7.0);
-
-                gain.gain.setValueAtTime(0, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2.0);
-                gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 5.0);
-                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 7.0);
-
-                osc1.connect(filter);
-                osc2.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc1.start();
-                osc2.start();
-                osc1.stop(audioCtx.currentTime + 7.5);
-                osc2.stop(audioCtx.currentTime + 7.5);
-            } catch(e) {}
-        }
-
-        class HiddenSeed {
-            constructor() {
-                this.relocate();
-            }
-            relocate() {
-                const padding = 100;
-                this.x = padding + Math.random() * (width - padding * 2);
-                this.y = padding + Math.random() * (height - padding * 2);
-            }
-        }
-
-        const hiddenSeed = new HiddenSeed();
-
         function generateFractalBranch(type, depth, maxDepth, angle, length) {
             if (depth >= maxDepth) return null;
             let children = [];
@@ -326,7 +279,7 @@
         }
 
         class RadialBloom {
-            constructor(x, y, hue, rewardType = 0, isMega = false) {
+            constructor(x, y, hue, rewardType = 0) {
                 this.x = x;
                 this.y = y;
                 this.baseHue = hue; 
@@ -334,43 +287,27 @@
                 this.rewardType = rewardType;
                 this.rotation = Math.random() * Math.PI * 2;
                 this.currentGrowth = 0.0; 
-                this.isMega = isMega;
+                this.life = 1.0;
+                this.decay = 0.006;
+                this.growthSpeed = 0.04;
 
-                if (this.isMega) {
-                    this.startTime = performance.now();
-                    this.duration = 7000; 
-                    this.baseLength = 80; // Compact center so inner branches bloom outwards
-                    this.spinSpeed = 0.0012; 
-                    this.maxDepth = 6;
-                    
-                    // High rotational symmetry prevents the harsh 4-spoke cross pattern
-                    if (rewardType === 0) { this.symmetries = 12; }
-                    else if (rewardType === 1) { this.symmetries = 10; }
-                    else if (rewardType === 2) { this.symmetries = 8; }
-                    else if (rewardType === 3) { this.symmetries = 12; }
-                } else {
-                    this.life = 1.0;
-                    this.decay = 0.006;
-                    this.growthSpeed = 0.04;
-
-                    if (rewardType === -1) {
-                        this.maxDepth = 2 + Math.floor(Math.random() * 2);
-                        this.symmetries = 3 + Math.floor(Math.random() * 4);
-                        this.baseLength = 25 + Math.random() * 20;
-                        this.spinSpeed = (Math.random() - 0.5) * 0.01;
-                    } else if (rewardType === 0) {
-                        this.maxDepth = 4; this.symmetries = 6; this.baseLength = 45;
-                        this.spinSpeed = 0.002;
-                    } else if (rewardType === 1) {
-                        this.maxDepth = 5; this.symmetries = 1; this.baseLength = 60;
-                        this.rotation = -Math.PI / 2; this.spinSpeed = 0;
-                    } else if (rewardType === 2) {
-                        this.maxDepth = 5; this.symmetries = 6; this.baseLength = 40;
-                        this.spinSpeed = 0.005;
-                    } else if (rewardType === 3) {
-                        this.maxDepth = 4; this.symmetries = 2; this.baseLength = 50;
-                        this.rotation = -Math.PI / 2; this.spinSpeed = 0;
-                    }
+                if (rewardType === -1) {
+                    this.maxDepth = 2 + Math.floor(Math.random() * 2);
+                    this.symmetries = 3 + Math.floor(Math.random() * 4);
+                    this.baseLength = 25 + Math.random() * 20;
+                    this.spinSpeed = (Math.random() - 0.5) * 0.01;
+                } else if (rewardType === 0) {
+                    this.maxDepth = 4; this.symmetries = 6; this.baseLength = 45;
+                    this.spinSpeed = 0.002;
+                } else if (rewardType === 1) {
+                    this.maxDepth = 5; this.symmetries = 1; this.baseLength = 60;
+                    this.rotation = -Math.PI / 2; this.spinSpeed = 0;
+                } else if (rewardType === 2) {
+                    this.maxDepth = 5; this.symmetries = 6; this.baseLength = 40;
+                    this.spinSpeed = 0.005;
+                } else if (rewardType === 3) {
+                    this.maxDepth = 4; this.symmetries = 2; this.baseLength = 50;
+                    this.rotation = -Math.PI / 2; this.spinSpeed = 0;
                 }
 
                 this.treeSymmetries = [];
@@ -387,7 +324,7 @@
             }
 
             grow() {
-                if (!this.isMega && this.maxDepth < 6) {
+                if (this.maxDepth < 6) {
                     this.maxDepth += 1;
                     this.baseLength += 8;
                     this.life = 1.0; 
@@ -397,48 +334,22 @@
             }
 
             update() {
-                if (this.isMega) {
-                    const elapsed = performance.now() - this.startTime;
-                    
-                    // Unfold layer-by-layer from depth 0 up to maxDepth over 4 seconds
-                    const growthProgress = Math.min(1, elapsed / 4000);
-                    this.currentGrowth = (1 - Math.pow(1 - growthProgress, 2.5)) * this.maxDepth;
-
-                    this.rotation += this.spinSpeed;
-                    this.colorCarousel += 2;
-
-                    if (elapsed > this.duration) {
-                        isAnimatingWin = false;
-                        hiddenSeed.relocate();
-                        return false; 
-                    }
-                    return true;
-                } else {
-                    if (this.currentGrowth < this.maxDepth) {
-                        this.currentGrowth += this.growthSpeed;
-                    }
-                    this.life -= this.decay;
-                    this.rotation += this.spinSpeed;
-                    
-                    if (this.rewardType !== -1) {
-                        this.colorCarousel += 2; 
-                    } else {
-                        this.spinSpeed *= 0.98; 
-                    }
-                    return this.life > 0;
+                if (this.currentGrowth < this.maxDepth) {
+                    this.currentGrowth += this.growthSpeed;
                 }
+                this.life -= this.decay;
+                this.rotation += this.spinSpeed;
+                
+                if (this.rewardType !== -1) {
+                    this.colorCarousel += 2; 
+                } else {
+                    this.spinSpeed *= 0.98; 
+                }
+                return this.life > 0;
             }
 
             draw(ctx) {
-                let alpha = 1.0;
-                if (this.isMega) {
-                    const elapsed = performance.now() - this.startTime;
-                    if (elapsed > 6000) {
-                        alpha = Math.max(0, 1.0 - ((elapsed - 6000) / 1000));
-                    }
-                } else {
-                    alpha = Math.max(0, this.life);
-                }
+                let alpha = Math.max(0, this.life);
 
                 ctx.save();
                 ctx.globalAlpha = alpha;
@@ -473,7 +384,7 @@
                     ctx.lineCap = 'round';
                     ctx.stroke();
                 } else {
-                    const strokeMultiplier = this.isMega ? 1.8 : 1.2;
+                    const strokeMultiplier = 1.2;
 
                     if (this.rewardType === 0) {
                         const hue = 190 + (this.colorCarousel * 0.2 + currentDepth * 12) % 60; 
@@ -536,31 +447,15 @@
 
         function triggerBloom(x, y) {
             initAudio();
-
-            const distToSeed = Math.hypot(hiddenSeed.x - x, hiddenSeed.y - y);
             const randomHue = Math.floor(Math.random() * 360); 
 
-            if (distToSeed < 35) {
-                isAnimatingWin = true; 
-                activeBlooms = []; 
-                
-                let currentRewardIndex = seedsFound % 4; 
-                seedsFound++;
-                currentFractalType = currentRewardIndex;
-
-                activeBlooms.push(new RadialBloom(width / 2, height / 2, randomHue, currentRewardIndex, true));
-                
-                playMegaDrone();
-                return;
-            }
-
-            let nearby = activeBlooms.find(b => !b.isMega && Math.hypot(b.x - x, b.y - y) < 80);
+            let nearby = activeBlooms.find(b => Math.hypot(b.x - x, b.y - y) < 80);
 
             if (nearby) {
                 nearby.grow();
                 playCalmTap();
             } else {
-                activeBlooms.push(new RadialBloom(x, y, randomHue, currentFractalType, false));
+                activeBlooms.push(new RadialBloom(x, y, randomHue, currentFractalType));
                 playCalmTap();
             }
 
@@ -571,11 +466,9 @@
 
         window.addEventListener('resize', resizeCanvas);
 
-        const handleInteraction = (e) => {
+        const handleStart = (e) => {
             e.preventDefault(); 
             
-            if (isAnimatingWin) return;
-
             const rect = canvas.getBoundingClientRect();
             let clientX, clientY;
 
@@ -588,10 +481,28 @@
             }
 
             triggerBloom(clientX, clientY);
+
+            // Initiate the 5 second hold timer
+            if (holdTimer) clearTimeout(holdTimer);
+            holdTimer = setTimeout(() => {
+                currentTypeIndex = (currentTypeIndex + 1) % fractalTypes.length;
+                currentFractalType = fractalTypes[currentTypeIndex];
+                playCalmTap(); // Subtle auditory feedback that the style changed
+            }, 5000);
         };
 
-        canvas.addEventListener('touchstart', handleInteraction, { passive: false });
-        canvas.addEventListener('mousedown', handleInteraction);
+        const handleEnd = (e) => {
+            // Cancel the hold timer if the user releases early
+            if (holdTimer) clearTimeout(holdTimer);
+        };
+
+        canvas.addEventListener('touchstart', handleStart, { passive: false });
+        canvas.addEventListener('mousedown', handleStart);
+        
+        canvas.addEventListener('touchend', handleEnd);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseleave', handleEnd);
+        canvas.addEventListener('touchcancel', handleEnd);
 
         document.getElementById('start-btn').addEventListener('click', () => {
             initAudio();
