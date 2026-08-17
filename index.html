@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Fractal Playground - Hidden Seed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BLOOM by SRG774</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         body, html {
@@ -19,6 +21,9 @@
             background-color: #030407;
             font-family: system-ui, -apple-system, sans-serif;
             color: #e0e6ed;
+            position: fixed;
+            touch-action: none;
+            overscroll-behavior: none;
         }
 
         canvas {
@@ -26,117 +31,179 @@
             width: 100vw;
             height: 100vh;
             cursor: pointer;
+            touch-action: none;
         }
 
-        .ui-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 250px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
-            pointer-events: auto;
-        }
-
-        .ui-header {
+        #interaction-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(3, 4, 7, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 9998;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            text-align: center;
+            padding: 24px;
+            transition: opacity 0.5s ease;
         }
 
-        .ui-title {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            color: #a0aec0;
-        }
-
-        .score-badge {
-            background: rgba(168, 85, 247, 0.3);
-            border: 1px solid rgba(192, 132, 252, 0.5);
-            color: #f3e8ff;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 700;
-            box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
-        }
-
-        .btn-row {
+        .overlay-content {
+            max-width: 400px;
             display: flex;
-            gap: 8px;
-            margin-top: 18px;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
         }
 
-        button {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+        .overlay-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00ffff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .overlay-desc {
+            font-size: 14px;
+            color: #a0aec0;
+            line-height: 1.6;
+        }
+
+        #start-btn {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 200, 255, 0.4));
+            border: 1px solid rgba(0, 255, 255, 0.4);
             color: #fff;
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 14px 36px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease;
+            box-shadow: 0 10px 25px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
-        button:hover {
-            background: rgba(255, 255, 255, 0.22);
-            border-color: rgba(255, 255, 255, 0.3);
+        #start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 255, 255, 0.25);
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(0, 200, 255, 0.6));
         }
 
-        .hint {
+        #play-content { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 15px; 
+        }
+
+        #orientation-mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #111111;
+            z-index: 9999;
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .phone-icon {
+            width: 50px;
+            height: 80px;
+            border: 3px solid white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            position: relative;
+        }
+
+        .phone-icon::after {
+            content: '';
             position: absolute;
-            bottom: 20px;
+            bottom: 5px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.5);
-            pointer-events: none;
-            text-align: center;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.9);
-            letter-spacing: 0.5px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: white;
+        }
+
+        @keyframes rotatePhone {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+            100% { transform: rotate(-90deg); }
+        }
+
+        @media screen and (max-aspect-ratio: 13/16) and (max-width: 767px) {
+            #orientation-mask {
+                display: flex;
+            }
         }
     </style>
 </head>
 <body>
 
-    <canvas id="canvas"></canvas>
+    <div id="orientation-mask">
+        <div class="phone-icon"></div>
+        <h2>Please Rotate Your Device</h2>
+        <p>This game is best played in Landscape Mode.</p>
+    </div>
 
-    <div class="ui-panel">
-        <div class="ui-header">
-            <span class="ui-title">Fractal Nexus</span>
-            <span class="score-badge" id="seedCount">Found: 0</span>
-        </div>
-
-        <div class="btn-row">
-            <button id="toggleSound">Sound: ON</button>
-            <button id="btnRestart">Restart</button>
+    <div id="interaction-overlay">
+        <div class="overlay-content">
+            <div id="play-content">
+                <div class="overlay-title">BLOOM</div>
+                <div class="overlay-desc" style="font-weight: bold; color: #fff; font-size: 16px;">by SRG774</div>
+                <div class="overlay-desc">Tap to plant. Find the hidden seeds to unlock screen-filling dimensional shifts. All UI is hidden for immersion.</div>
+                <button id="start-btn">Enter & Play</button>
+            </div>
         </div>
     </div>
 
-    <div class="hint">Tap to plant. Seek the hidden seeds to unlock and evolve new fractal dimensions...</div>
+    <canvas id="canvas"></canvas>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        let width = canvas.width = window.innerWidth;
-        let height = canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+        }
 
-        let soundEnabled = true;
+        let width, height;
+        resizeCanvas();
+
         let activeBlooms = [];
-        let rewardParticles = [];
         let seedsFound = 0;
-        let currentFractalType = -1; // -1 means standard organic tree before any seed is collected
+        let currentFractalType = -1;
+        let isAnimatingWin = false;
 
-        const calmingScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+        const ambientScale = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63];
         let audioCtx = null;
 
         function initAudio() {
@@ -149,51 +216,66 @@
         }
 
         function playCalmTap() {
-            if (!soundEnabled || !audioCtx) return;
+            if (!audioCtx) return;
             try {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                const freq = calmingScale[Math.floor(Math.random() * calmingScale.length)];
+                const filter = audioCtx.createBiquadFilter();
+                
+                const freq = ambientScale[Math.floor(Math.random() * ambientScale.length)];
                 
                 osc.type = 'sine'; 
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-                gain.gain.setValueAtTime(0, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.05); 
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5); 
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
 
-                osc.connect(gain);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.02, audioCtx.currentTime + 0.1); 
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.0); 
+
+                osc.connect(filter);
+                filter.connect(gain);
                 gain.connect(audioCtx.destination);
 
                 osc.start();
-                osc.stop(audioCtx.currentTime + 1.5);
+                osc.stop(audioCtx.currentTime + 2.0);
             } catch(e) {}
         }
 
-        function playRewardCascade() {
-            if (!soundEnabled || !audioCtx) return;
-            const arpeggio = [0, 2, 4, 6, 7];
-            
-            arpeggio.forEach((noteIdx, i) => {
-                setTimeout(() => {
-                    try {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
+        function playMegaDrone() {
+            if (!audioCtx) return;
+            try {
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
 
-                        osc.type = 'triangle'; 
-                        osc.frequency.setValueAtTime(calmingScale[noteIdx % calmingScale.length] * 1.5, audioCtx.currentTime);
+                osc1.type = 'sine';
+                osc2.type = 'triangle';
+                osc1.frequency.setValueAtTime(130.81, audioCtx.currentTime);
+                osc2.frequency.setValueAtTime(132.00, audioCtx.currentTime);
 
-                        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(100, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 3.5);
+                filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 7.0);
 
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2.0);
+                gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 5.0);
+                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 7.0);
 
-                        osc.start();
-                        osc.stop(audioCtx.currentTime + 2.5);
-                    } catch(e) {}
-                }, i * 100);
-            });
+                osc1.connect(filter);
+                osc2.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc1.start();
+                osc2.start();
+                osc1.stop(audioCtx.currentTime + 7.5);
+                osc2.stop(audioCtx.currentTime + 7.5);
+            } catch(e) {}
         }
 
         class HiddenSeed {
@@ -201,118 +283,93 @@
                 this.relocate();
             }
             relocate() {
-                const padding = 150;
+                const padding = 100;
                 this.x = padding + Math.random() * (width - padding * 2);
                 this.y = padding + Math.random() * (height - padding * 2);
-
-                if (this.x > width - 300 && this.y < 200) {
-                    this.y += 200;
-                }
             }
         }
 
         const hiddenSeed = new HiddenSeed();
 
-        // ---------------------------------------------------------
-        // UNIVERSAL FRACTAL GENERATOR
-        // Defines the structural "bones" of each distinct fractal
-        // ---------------------------------------------------------
-        function generateFractalBranch(isReward, type, depth, maxDepth, angle, length) {
+        function generateFractalBranch(type, depth, maxDepth, angle, length) {
             if (depth >= maxDepth) return null;
             let children = [];
 
             if (type === -1) {
-                // STANDARD TAP: Original Organic Tree (Before 1st seed collection)
                 const offsetLeft = (20 + Math.random() * 30) * Math.PI / 180;
                 const offsetRight = (20 + Math.random() * 30) * Math.PI / 180;
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle - offsetLeft, length * (0.6 + Math.random() * 0.2)));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + offsetRight, length * (0.6 + Math.random() * 0.2)));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - offsetLeft, length * (0.6 + Math.random() * 0.2)));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + offsetRight, length * (0.6 + Math.random() * 0.2)));
                 if (Math.random() < 0.4 && depth < maxDepth - 1) {
-                    children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + (Math.random() - 0.5) * 0.3, length * 0.5));
+                    children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + (Math.random() - 0.5) * 0.3, length * 0.5));
                 }
-
             } else if (type === 0) {
-                // 1ST SEED: Snowflake / Koch (Strict 60-degree hex geometry)
-                const offset = Math.PI / 3; 
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle - offset, length * 0.5));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + offset, length * 0.5));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle, length * 0.6));
-
+                const offset = Math.PI / 4; 
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - offset, length * 0.78));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + offset, length * 0.78));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle, length * 0.82));
             } else if (type === 1) {
-                // 2ND SEED: Mandelbrot (Cardioid Bulbs and split stems)
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + 0.6, length * 0.6));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle - 0.6, length * 0.6));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle, length * 0.75));
-
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + 0.4, length * 0.8));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - 0.4, length * 0.8));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle, length * 0.85));
             } else if (type === 2) {
-                // 3RD SEED: Julia (Deep sweeping interlocking spirals)
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + 0.35, length * 0.85)); 
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle - 0.2, length * 0.7)); 
-                
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + 0.3, length * 0.82)); 
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - 0.3, length * 0.82)); 
             } else if (type === 3) {
-                // 4TH SEED: Burning Ship (Rigid blocks, chaotic 90-degree lines)
-                const offset = Math.PI / 2; 
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle - offset, length * 0.55));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle + offset, length * 0.55));
-                children.push(generateFractalBranch(isReward, type, depth + 1, maxDepth, angle, length * 0.7));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + 0.25, length * 0.8));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - 0.25, length * 0.8));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle + 0.6, length * 0.5));
+                children.push(generateFractalBranch(type, depth + 1, maxDepth, angle - 0.6, length * 0.5));
             }
 
             return { depth, angle, targetLength: length, children: children.filter(Boolean) };
         }
 
         class RadialBloom {
-            constructor(x, y, hue, isReward = false, rewardType = 0) {
+            constructor(x, y, hue, rewardType = 0, isMega = false) {
                 this.x = x;
                 this.y = y;
                 this.baseHue = hue; 
                 this.colorCarousel = 0; 
-                this.isReward = isReward;
                 this.rewardType = rewardType;
                 this.rotation = Math.random() * Math.PI * 2;
-                this.life = 1.0;
-                this.currentGrowth = 0.1; 
-                this.growthSpeed = 0.04; 
+                this.currentGrowth = 0.0; 
+                this.isMega = isMega;
 
-                if (isReward) {
-                    // Reward / Seed reveal configuration
-                    this.decay = 0.005;
+                if (this.isMega) {
+                    this.startTime = performance.now();
+                    this.duration = 7000; 
+                    this.baseLength = 80; // Compact center so inner branches bloom outwards
+                    this.spinSpeed = 0.0012; 
+                    this.maxDepth = 6;
                     
-                    if (rewardType === 0) {
-                        this.maxDepth = 5; this.symmetries = 6; this.baseLength = 80;
-                        this.spinSpeed = 0.003;
-                    } else if (rewardType === 1) {
-                        this.maxDepth = 6; this.symmetries = 1; this.baseLength = 120;
-                        this.rotation = -Math.PI / 2; 
-                        this.spinSpeed = 0; 
-                    } else if (rewardType === 2) {
-                        this.maxDepth = 8; this.symmetries = 4; this.baseLength = 60;
-                        this.spinSpeed = 0.01; 
-                    } else if (rewardType === 3) {
-                        this.maxDepth = 6; this.symmetries = 2; this.baseLength = 90;
-                        this.rotation = 0; 
-                        this.spinSpeed = 0; 
-                    }
+                    // High rotational symmetry prevents the harsh 4-spoke cross pattern
+                    if (rewardType === 0) { this.symmetries = 12; }
+                    else if (rewardType === 1) { this.symmetries = 10; }
+                    else if (rewardType === 2) { this.symmetries = 8; }
+                    else if (rewardType === 3) { this.symmetries = 12; }
                 } else {
-                    // Standard Tap configuration governed by current unlocked seed style
-                    this.decay = 0.015;
+                    this.life = 1.0;
+                    this.decay = 0.006;
+                    this.growthSpeed = 0.04;
 
                     if (rewardType === -1) {
                         this.maxDepth = 2 + Math.floor(Math.random() * 2);
                         this.symmetries = 3 + Math.floor(Math.random() * 4);
-                        this.baseLength = 30 + Math.random() * 25;
+                        this.baseLength = 25 + Math.random() * 20;
                         this.spinSpeed = (Math.random() - 0.5) * 0.01;
                     } else if (rewardType === 0) {
-                        this.maxDepth = 4; this.symmetries = 6; this.baseLength = 50;
+                        this.maxDepth = 4; this.symmetries = 6; this.baseLength = 45;
                         this.spinSpeed = 0.002;
                     } else if (rewardType === 1) {
-                        this.maxDepth = 5; this.symmetries = 1; this.baseLength = 70;
+                        this.maxDepth = 5; this.symmetries = 1; this.baseLength = 60;
                         this.rotation = -Math.PI / 2; this.spinSpeed = 0;
                     } else if (rewardType === 2) {
-                        this.maxDepth = 5; this.symmetries = 4; this.baseLength = 45;
+                        this.maxDepth = 5; this.symmetries = 6; this.baseLength = 40;
                         this.spinSpeed = 0.005;
                     } else if (rewardType === 3) {
-                        this.maxDepth = 5; this.symmetries = 2; this.baseLength = 60;
-                        this.rotation = 0; this.spinSpeed = 0;
+                        this.maxDepth = 4; this.symmetries = 2; this.baseLength = 50;
+                        this.rotation = -Math.PI / 2; this.spinSpeed = 0;
                     }
                 }
 
@@ -324,15 +381,15 @@
                 this.treeSymmetries = [];
                 for (let i = 0; i < this.symmetries; i++) {
                     const startAngle = this.rotation + (i * Math.PI * 2) / this.symmetries;
-                    const rootBranch = generateFractalBranch(this.isReward, this.rewardType, 0, this.maxDepth, startAngle, this.baseLength);
+                    const rootBranch = generateFractalBranch(this.rewardType, 0, this.maxDepth, startAngle, this.baseLength);
                     this.treeSymmetries.push(rootBranch);
                 }
             }
 
             grow() {
-                if (this.maxDepth < 6) {
+                if (!this.isMega && this.maxDepth < 6) {
                     this.maxDepth += 1;
-                    this.baseLength += 10;
+                    this.baseLength += 8;
                     this.life = 1.0; 
                     this.spinSpeed += (Math.random() - 0.5) * 0.02;
                     this.generateStructure();
@@ -340,23 +397,51 @@
             }
 
             update() {
-                if (this.currentGrowth < this.maxDepth) {
-                    this.currentGrowth += this.growthSpeed;
-                }
-                this.life -= this.decay;
-                this.rotation += this.spinSpeed;
-                
-                if (this.isReward || this.rewardType !== -1) {
-                    this.colorCarousel += 2; 
+                if (this.isMega) {
+                    const elapsed = performance.now() - this.startTime;
+                    
+                    // Unfold layer-by-layer from depth 0 up to maxDepth over 4 seconds
+                    const growthProgress = Math.min(1, elapsed / 4000);
+                    this.currentGrowth = (1 - Math.pow(1 - growthProgress, 2.5)) * this.maxDepth;
+
+                    this.rotation += this.spinSpeed;
+                    this.colorCarousel += 2;
+
+                    if (elapsed > this.duration) {
+                        isAnimatingWin = false;
+                        hiddenSeed.relocate();
+                        return false; 
+                    }
+                    return true;
                 } else {
-                    this.spinSpeed *= 0.98; 
+                    if (this.currentGrowth < this.maxDepth) {
+                        this.currentGrowth += this.growthSpeed;
+                    }
+                    this.life -= this.decay;
+                    this.rotation += this.spinSpeed;
+                    
+                    if (this.rewardType !== -1) {
+                        this.colorCarousel += 2; 
+                    } else {
+                        this.spinSpeed *= 0.98; 
+                    }
+                    return this.life > 0;
                 }
-                return this.life > 0;
             }
 
             draw(ctx) {
+                let alpha = 1.0;
+                if (this.isMega) {
+                    const elapsed = performance.now() - this.startTime;
+                    if (elapsed > 6000) {
+                        alpha = Math.max(0, 1.0 - ((elapsed - 6000) / 1000));
+                    }
+                } else {
+                    alpha = Math.max(0, this.life);
+                }
+
                 ctx.save();
-                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.globalAlpha = alpha;
                 ctx.globalCompositeOperation = 'lighter';
                 
                 for (let i = 0; i < this.treeSymmetries.length; i++) {
@@ -368,9 +453,6 @@
                 ctx.restore();
             }
 
-            // ---------------------------------------------------------
-            // RENDER LOGIC: Translates math nodes into distinct aesthetics
-            // ---------------------------------------------------------
             drawBranchNode(ctx, x, y, node, currentDepth, symIndex) {
                 if (currentDepth > this.currentGrowth) return;
 
@@ -386,111 +468,69 @@
                 ctx.lineTo(x2, y2);
 
                 if (this.rewardType === -1) {
-                    // Standard Organic Tree Rendering (Pre-first seed)
                     ctx.strokeStyle = `hsl(${this.baseHue}, 80%, ${70 - currentDepth * 8}%)`;
                     ctx.lineWidth = Math.max(0.5, (this.maxDepth - currentDepth) * 1.2);
                     ctx.lineCap = 'round';
                     ctx.stroke();
                 } else {
+                    const strokeMultiplier = this.isMega ? 1.8 : 1.2;
+
                     if (this.rewardType === 0) {
-                        // SEED 1: Snowflake (Sharp Ice)
-                        const hue = 190 + (this.colorCarousel * 0.2) % 40; 
-                        ctx.strokeStyle = `hsl(${hue}, 100%, ${60 + currentDepth*5}%)`;
-                        ctx.lineWidth = Math.max(1, (this.maxDepth - currentDepth) * 1.2);
-                        ctx.lineCap = 'butt'; 
+                        const hue = 190 + (this.colorCarousel * 0.2 + currentDepth * 12) % 60; 
+                        ctx.strokeStyle = `hsl(${hue}, 100%, ${60 + currentDepth * 5}%)`;
+                        ctx.lineWidth = Math.max(0.8, (this.maxDepth - currentDepth) * strokeMultiplier);
+                        ctx.lineCap = 'round'; 
                         ctx.stroke();
 
-                        if (currentDepth === this.maxDepth - 1) {
+                        if (currentDepth === Math.floor(this.currentGrowth)) {
                             ctx.fillStyle = `hsl(${hue}, 100%, 90%)`;
-                            ctx.fillRect(x2 - 1.5, y2 - 1.5, 3, 3); // Ice diamond tips
+                            ctx.fillRect(x2 - 2, y2 - 2, 4, 4);
                         }
-
                     } else if (this.rewardType === 1) {
-                        // SEED 2: Mandelbrot (Deep purple bulbs & bubbles)
-                        const hue = (280 + currentDepth * 15) % 360; 
+                        const hue = (280 + currentDepth * 15 + this.colorCarousel * 0.3) % 360; 
                         ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
-                        ctx.lineWidth = Math.max(1, (this.maxDepth - currentDepth));
+                        ctx.lineWidth = Math.max(0.8, (this.maxDepth - currentDepth) * strokeMultiplier);
                         ctx.lineCap = 'round';
                         ctx.stroke();
 
                         ctx.beginPath();
-                        ctx.arc(x2, y2, Math.max(1, (this.maxDepth - currentDepth) * 1.8), 0, Math.PI * 2);
+                        ctx.arc(x2, y2, Math.max(1, (this.maxDepth - currentDepth) * 1.5), 0, Math.PI * 2);
                         ctx.fillStyle = `hsl(${hue}, 100%, 75%)`;
                         ctx.fill();
-
                     } else if (this.rewardType === 2) {
-                        // SEED 3: Julia Set (Golden/Cyan swooping galaxy arms)
                         const hue = (45 + this.colorCarousel * 0.5 + currentDepth * 10) % 360; 
                         ctx.strokeStyle = `hsl(${hue}, 100%, 65%)`;
-                        ctx.lineWidth = Math.max(1, (this.maxDepth - currentDepth) * 1.5);
+                        ctx.lineWidth = Math.max(0.8, (this.maxDepth - currentDepth) * strokeMultiplier);
                         ctx.lineCap = 'round';
                         ctx.stroke();
 
                         if (depthFraction > 0.8) {
                             ctx.beginPath();
-                            ctx.arc(x2, y2, 1.5, 0, Math.PI * 2);
+                            ctx.arc(x2, y2, 2, 0, Math.PI * 2);
                             ctx.fillStyle = `hsl(${hue}, 100%, 85%)`;
                             ctx.fill();
                         }
-
                     } else if (this.rewardType === 3) {
-                        // SEED 4: Burning Ship (Grid-like artifacts & Fire spikes)
-                        const hue = (0 + currentDepth * 12) % 60; 
-                        ctx.strokeStyle = `hsl(${hue}, 100%, 55%)`;
-                        ctx.lineWidth = Math.max(1, (this.maxDepth - currentDepth) * 1.5);
-                        ctx.lineCap = 'square';
+                        const hue = (320 + currentDepth * 15 + this.colorCarousel * 0.5) % 360;
+                        ctx.strokeStyle = `hsl(${hue}, 80%, ${60 + currentDepth * 5}%)`;
+                        ctx.lineWidth = Math.max(0.8, (this.maxDepth - currentDepth) * strokeMultiplier);
+                        ctx.lineCap = 'round';
                         ctx.stroke();
 
-                        if (currentDepth > 1 && Math.random() < 0.4) {
+                        if (currentDepth > 2) {
                             ctx.beginPath();
-                            ctx.moveTo(x2, y2);
-                            ctx.lineTo(x2, y2 - (10 + Math.random() * 20) * depthFraction); 
-                            ctx.strokeStyle = `rgba(255, ${Math.random()*150 + 50}, 0, 0.8)`;
-                            ctx.lineWidth = 1;
-                            ctx.stroke();
+                            ctx.arc(x2, y2, 2, 0, Math.PI * 2);
+                            ctx.fillStyle = `hsl(${hue}, 100%, 85%)`;
+                            ctx.fill();
                         }
                     }
                 }
 
-                // Recurse to children
-                if (depthFraction >= 0.7 && node.children) {
+                if (depthFraction >= 0.6 && node.children) {
                     for (let child of node.children) {
                         this.drawBranchNode(ctx, x2, y2, child, currentDepth + 1, symIndex);
                     }
                 }
-            }
-        }
-
-        class Particle {
-            constructor(x, y, hue) {
-                this.x = x;
-                this.y = y;
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 8;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed;
-                this.life = 1.0;
-                this.decay = 0.01 + Math.random() * 0.015;
-                this.hue = (hue + (Math.random() - 0.5) * 60) % 360;
-                this.size = 2 + Math.random() * 4;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vx *= 0.95;
-                this.vy *= 0.95;
-                this.life -= this.decay;
-                return this.life > 0;
-            }
-            draw(ctx) {
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, this.life);
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.fillStyle = `hsl(${this.hue}, 100%, 75%)`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
             }
         }
 
@@ -500,87 +540,79 @@
             const distToSeed = Math.hypot(hiddenSeed.x - x, hiddenSeed.y - y);
             const randomHue = Math.floor(Math.random() * 360); 
 
-            // Check if user hit the invisible seed
-            if (distToSeed < 100) {
-                let currentRewardIndex = seedsFound % 4; // Cycles through 0, 1, 2, 3
+            if (distToSeed < 35) {
+                isAnimatingWin = true; 
+                activeBlooms = []; 
                 
+                let currentRewardIndex = seedsFound % 4; 
                 seedsFound++;
-                document.getElementById('seedCount').textContent = `Found: ${seedsFound}`;
-
-                // Update the tapped fractal pattern to match the newly unlocked seed/level style!
                 currentFractalType = currentRewardIndex;
 
-                // Spawn the specific algorithm reward bloom
-                activeBlooms.push(new RadialBloom(hiddenSeed.x, hiddenSeed.y, randomHue, true, currentRewardIndex));
+                activeBlooms.push(new RadialBloom(width / 2, height / 2, randomHue, currentRewardIndex, true));
                 
-                let particleHue = randomHue;
-                if (currentRewardIndex === 0) particleHue = 190; // Snowflake: Ice Blue
-                if (currentRewardIndex === 1) particleHue = 300; // Mandelbrot: Purple/Pink
-                if (currentRewardIndex === 2) particleHue = 45;  // Julia: Gold
-                if (currentRewardIndex === 3) particleHue = 15;  // Burning Ship: Orange/Red
-
-                for (let i = 0; i < 80; i++) {
-                    rewardParticles.push(new Particle(hiddenSeed.x, hiddenSeed.y, particleHue));
-                }
-
-                playRewardCascade();
-                hiddenSeed.relocate();
+                playMegaDrone();
                 return;
             }
 
-            // Normal Tap (now uses currentFractalType pattern)
-            let nearby = activeBlooms.find(b => !b.isReward && Math.hypot(b.x - x, b.y - y) < 80);
+            let nearby = activeBlooms.find(b => !b.isMega && Math.hypot(b.x - x, b.y - y) < 80);
 
             if (nearby) {
                 nearby.grow();
                 playCalmTap();
             } else {
-                activeBlooms.push(new RadialBloom(x, y, randomHue, false, currentFractalType));
+                activeBlooms.push(new RadialBloom(x, y, randomHue, currentFractalType, false));
                 playCalmTap();
             }
 
-            if (activeBlooms.length > 15) {
+            if (activeBlooms.length > 30) {
                 activeBlooms.shift();
             }
         }
 
-        function restartApp() {
-            activeBlooms = [];
-            rewardParticles = [];
-            seedsFound = 0;
-            currentFractalType = -1;
-            document.getElementById('seedCount').textContent = `Found: 0`;
-            ctx.clearRect(0, 0, width, height);
-            hiddenSeed.relocate();
-        }
+        window.addEventListener('resize', resizeCanvas);
 
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-        });
+        const handleInteraction = (e) => {
+            e.preventDefault(); 
+            
+            if (isAnimatingWin) return;
 
-        canvas.addEventListener('pointerdown', (e) => {
-            triggerBloom(e.clientX, e.clientY);
-        });
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
 
-        document.getElementById('toggleSound').addEventListener('click', (e) => {
-            soundEnabled = !soundEnabled;
-            e.target.textContent = `Sound: ${soundEnabled ? 'ON' : 'OFF'}`;
-        });
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX - rect.left;
+                clientY = e.touches[0].clientY - rect.top;
+            } else {
+                clientX = e.clientX - rect.left;
+                clientY = e.clientY - rect.top;
+            }
 
-        document.getElementById('btnRestart').addEventListener('click', () => {
-            restartApp();
+            triggerBloom(clientX, clientY);
+        };
+
+        canvas.addEventListener('touchstart', handleInteraction, { passive: false });
+        canvas.addEventListener('mousedown', handleInteraction);
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            initAudio();
+            
+            const docElement = document.documentElement;
+            if (docElement.requestFullscreen) {
+                docElement.requestFullscreen().catch(err => {});
+            } else if (docElement.webkitRequestFullscreen) {
+                docElement.webkitRequestFullscreen();
+            }
+
+            const overlay = document.getElementById('interaction-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
         });
 
         function animate() {
-            ctx.fillStyle = 'rgba(3, 4, 7, 0.25)';
+            ctx.fillStyle = 'rgba(3, 4, 7, 0.15)';
             ctx.fillRect(0, 0, width, height);
-
-            rewardParticles = rewardParticles.filter(p => {
-                const alive = p.update();
-                if (alive) p.draw(ctx);
-                return alive;
-            });
 
             activeBlooms = activeBlooms.filter(bloom => {
                 const alive = bloom.update();
