@@ -168,7 +168,7 @@
             <div id="play-content">
                 <div class="overlay-title">BLOOM</div>
                 <div class="overlay-desc" style="font-weight: bold; color: #fff; font-size: 16px;">by SRG774</div>
-                <div class="overlay-desc">Tap to plant. Hold anywhere for 5 seconds to evolve to the next fractal type. All UI is hidden for immersion.</div>
+                <div class="overlay-desc">Tap to plant. Hold anywhere for 3 seconds to evolve to the next fractal type. All UI is hidden for immersion.</div>
                 <button id="start-btn">Enter & Play</button>
             </div>
         </div>
@@ -199,7 +199,7 @@
         resizeCanvas();
 
         let activeBlooms = [];
-        const fractalTypes = [1, 0, -1, 2, 3];
+        const fractalTypes = [1, 2, -1];
         let currentTypeIndex = 0;
         let currentFractalType = fractalTypes[currentTypeIndex];
         let holdTimer = null;
@@ -482,13 +482,13 @@
 
             triggerBloom(clientX, clientY);
 
-            // Initiate the 5 second hold timer
+            // Initiate the 3 second hold timer
             if (holdTimer) clearTimeout(holdTimer);
             holdTimer = setTimeout(() => {
                 currentTypeIndex = (currentTypeIndex + 1) % fractalTypes.length;
                 currentFractalType = fractalTypes[currentTypeIndex];
                 playCalmTap(); // Subtle auditory feedback that the style changed
-            }, 5000);
+            }, 3000);
         };
 
         const handleEnd = (e) => {
